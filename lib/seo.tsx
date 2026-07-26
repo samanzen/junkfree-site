@@ -5,8 +5,8 @@ export const SITE = {
   url: "https://www.junkfree.ca",
   // Single source of truth for contact info — header, footer, contact page,
   // and schema all read from here. Override per-deploy via env if needed.
-  phone: process.env.NEXT_PUBLIC_PHONE || "+1-604-000-0000",
-  phoneDisplay: process.env.NEXT_PUBLIC_PHONE_DISPLAY || "(604) 000-0000",
+  phone: process.env.NEXT_PUBLIC_PHONE || "+16045002003",
+  phoneDisplay: process.env.NEXT_PUBLIC_PHONE_DISPLAY || "(604) 500-2003",
   email: process.env.NEXT_PUBLIC_EMAIL || "hello@junkfree.ca",
   region: "Greater Vancouver",
   theme: "#228B5A",
