@@ -31,6 +31,7 @@ export default function QuoteForm() {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "Something went wrong.");
+      if (data.ghlError) console.warn("GHL:", data.ghlError);
       setStatus("done");
     } catch (e) {
       setStatus("error");

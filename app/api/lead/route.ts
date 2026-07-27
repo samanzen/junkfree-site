@@ -63,10 +63,13 @@ export async function POST(req: Request) {
     if (error) throw error;
 
     // Also push into GoHighLevel Contacts (free — no premium webhook trigger).
-    // Never blocks the lead: if GHL fails, the Supabase row is still saved.
-    await pushToGHL({ name, phone, email, city, details }).catch(() => {});
+    // Captures any GHL error so we can diagnose, but never loses the lead.
+    let ghlError: string | null = null;
+    await pushToGHL({ name, phone, email, city, details }).catch((e) => {
+      ghlError = e instanceof Error ? e.message : String(e);
+    });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, ghlError });
   } catch {
     return NextResponse.json(
       { ok: false, error: "Something went wrong — please call or text us instead." },
@@ -91,7 +94,7 @@ async function pushToGHL(lead: {
   const [firstName, ...rest] = lead.name.split(" ");
   const lastName = rest.join(" ");
 
-  await fetch("https://services.leadconnectorhq.com/contacts/", {
+  const res = await fetch("https://services.leadconnectorhq.com/contacts/", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -107,9 +110,11 @@ async function pushToGHL(lead: {
       city: lead.city || undefined,
       source: "Website quote form",
       tags: ["website-lead", "junkfree"],
-      customFields: lead.details
-        ? [{ key: "quote_details", field_value: lead.details }]
-        : undefined,
     }),
   });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`GHL ${res.status}: ${body}`);
+  }
 }
