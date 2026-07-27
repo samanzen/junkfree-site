@@ -94,7 +94,10 @@ async function pushToGHL(lead: {
   const [firstName, ...rest] = lead.name.split(" ");
   const lastName = rest.join(" ");
 
-  const res = await fetch("https://services.leadconnectorhq.com/contacts/", {
+  // Use the upsert endpoint: if a contact with this phone/email already exists,
+  // GHL updates it (and re-applies tags to re-trigger the workflow) instead of
+  // erroring with "duplicated contacts".
+  const res = await fetch("https://services.leadconnectorhq.com/contacts/upsert", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
