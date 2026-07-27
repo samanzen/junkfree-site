@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { POSTS } from "@/lib/data/blog";
+import { publishedBlogPosts } from "@/lib/content";
 import { meta } from "@/lib/seo";
 
 export const metadata = meta("Blog", "Junk removal tips, local guides, and eco-friendly disposal advice for Greater Vancouver.", "/blog");
+export const revalidate = 300; // refresh so newly published posts appear
 
-export default function Blog() {
+export default async function Blog() {
+  const agent = await publishedBlogPosts();
+  const staticSlugs = new Set(POSTS.map((p) => p.slug));
+  const extra = agent.filter((p) => !staticSlugs.has(p.slug));
+  const all = [...extra, ...POSTS.map((p) => ({ slug: p.slug, title: p.title }))];
+
   return (
     <>
       <section className="hero"><div className="wrap">
@@ -14,7 +21,7 @@ export default function Blog() {
       </div></section>
       <section><div className="wrap">
         <div className="grid g2">
-          {POSTS.map((p) => (
+          {all.map((p) => (
             <Link key={p.slug} href={`/blog/${p.slug}`} className="card">
               <h3>{p.title}</h3>
               <span className="arrow">Read more →</span>

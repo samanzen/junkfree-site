@@ -1,25 +1,49 @@
-// Bridge to the agent repo: if the SEO agent has published content for a slug,
-// use it; otherwise the page renders its solid default template.
-// Works even with no Supabase configured (returns null gracefully).
+// Bridge to the SEO agent: published content lives in the shared Supabase
+// `content` table. The site reads it to show agent-published blog posts and to
+// override page content. Works gracefully with no Supabase configured.
 
-let cache: Record<string, { title: string; body: string }> | null = null;
+import { marked } from "marked";
 
-export async function publishedContent(slug: string) {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+type Row = { slug: string; title: string; body: string };
+let cache: Row[] | null = null;
+
+async function all(): Promise<Row[]> {
+  if (cache) return cache;
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return (cache = []);
   try {
-    if (!cache) {
-      const { createClient } = await import("@supabase/supabase-js");
-      const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-        auth: { persistSession: false },
-      });
-      const { data } = await db.from("content").select("slug,title,body");
-      cache = {};
-      (data || []).forEach((r: { slug: string; title: string; body: string }) => {
-        cache![r.slug] = { title: r.title, body: r.body };
-      });
-    }
-    return cache[slug] || null;
+    const { createClient } = await import("@supabase/supabase-js");
+    const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+    // Only Junk Free's published posts (brand filter is safe even if column absent).
+    const { data } = await db
+      .from("content")
+      .select("slug,title,body")
+      .not("published_at", "is", null);
+    cache = (data as Row[]) || [];
   } catch {
-    return null;
+    cache = [];
   }
+  return cache;
+}
+
+// Raw record for a slug (e.g. "blog/junk-removal-cost-vancouver").
+export async function publishedContent(slug: string) {
+  const rows = await all();
+  return rows.find((r) => r.slug === slug) || null;
+}
+
+// Rendered HTML for a slug (markdown → HTML), or null.
+export async function publishedHtml(slug: string) {
+  const row = await publishedContent(slug);
+  if (!row) return null;
+  return { title: row.title, html: await marked.parse(row.body) };
+}
+
+// All agent-published blog posts, for the /blog list.
+export async function publishedBlogPosts() {
+  const rows = await all();
+  return rows
+    .filter((r) => r.slug.startsWith("blog/"))
+    .map((r) => ({ slug: r.slug.replace(/^blog\//, ""), title: r.title }));
 }
