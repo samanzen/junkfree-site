@@ -61,6 +61,11 @@ export async function POST(req: Request) {
       consented_at: new Date().toISOString(),
     });
     if (error) throw error;
+
+    // Also push into GoHighLevel Contacts (free — no premium webhook trigger).
+    // Never blocks the lead: if GHL fails, the Supabase row is still saved.
+    await pushToGHL({ name, phone, email, city, details }).catch(() => {});
+
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json(
@@ -68,4 +73,43 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+}
+
+// Send the lead to GHL as a Contact via the v2 API. Uses a private-integration
+// token + location id from env. Silent no-op if not configured.
+async function pushToGHL(lead: {
+  name: string;
+  phone: string;
+  email: string;
+  city: string;
+  details: string;
+}) {
+  const token = process.env.GHL_API_TOKEN;
+  const locationId = process.env.GHL_LOCATION_ID;
+  if (!token || !locationId) return;
+
+  const [firstName, ...rest] = lead.name.split(" ");
+  const lastName = rest.join(" ");
+
+  await fetch("https://services.leadconnectorhq.com/contacts/", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Version: "2021-07-28",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      locationId,
+      firstName: firstName || lead.name,
+      lastName: lastName || undefined,
+      email: lead.email || undefined,
+      phone: lead.phone || undefined,
+      city: lead.city || undefined,
+      source: "Website quote form",
+      tags: ["website-lead", "junkfree"],
+      customFields: lead.details
+        ? [{ key: "quote_details", field_value: lead.details }]
+        : undefined,
+    }),
+  });
 }
