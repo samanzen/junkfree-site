@@ -6,6 +6,7 @@ import { useState } from "react";
 export default function QuoteForm() {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [error, setError] = useState("");
+  const [ghlDiag, setGhlDiag] = useState("");
 
   async function submit() {
     const get = (id: string) =>
@@ -31,7 +32,7 @@ export default function QuoteForm() {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "Something went wrong.");
-      if (data.ghlError) console.warn("GHL:", data.ghlError);
+      setGhlDiag(data.ghlError ? `GHL: ${data.ghlError}` : "GHL: contact created OK");
       setStatus("done");
     } catch (e) {
       setStatus("error");
@@ -44,6 +45,9 @@ export default function QuoteForm() {
       <div className="card" style={{ maxWidth: 520 }}>
         <h3>Request received ✓</h3>
         <p>Thanks — we&apos;ll get back to you with an upfront quote, usually within the hour during business hours.</p>
+        {ghlDiag && (
+          <p style={{ fontSize: 11, color: "#999", marginTop: 10, wordBreak: "break-word" }}>{ghlDiag}</p>
+        )}
       </div>
     );
   }
