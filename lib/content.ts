@@ -5,26 +5,21 @@
 import { marked } from "marked";
 
 type Row = { slug: string; title: string; body: string };
-let cache: Row[] | null = null;
-
 async function all(): Promise<Row[]> {
-  if (cache) return cache;
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return (cache = []);
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
   try {
     const { createClient } = await import("@supabase/supabase-js");
     const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     });
-    // Only Junk Free's published posts (brand filter is safe even if column absent).
     const { data } = await db
       .from("content")
       .select("slug,title,body")
       .not("published_at", "is", null);
-    cache = (data as Row[]) || [];
+    return (data as Row[]) || [];
   } catch {
-    cache = [];
+    return [];
   }
-  return cache;
 }
 
 // Raw record for a slug (e.g. "blog/junk-removal-cost-vancouver").

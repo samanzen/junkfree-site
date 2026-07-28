@@ -8,7 +8,7 @@ import CtaBand from "@/components/CtaBand";
 
 // Allow new agent-published slugs (not just the original static ones).
 export const dynamicParams = true;
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
   const agent = await publishedBlogPosts();

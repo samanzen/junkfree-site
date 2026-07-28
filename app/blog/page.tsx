@@ -4,7 +4,7 @@ import { publishedBlogPosts } from "@/lib/content";
 import { meta } from "@/lib/seo";
 
 export const metadata = meta("Blog", "Junk removal tips, local guides, and eco-friendly disposal advice for Greater Vancouver.", "/blog");
-export const revalidate = 300; // refresh so newly published posts appear
+export const dynamic = "force-dynamic";
 
 export default async function Blog() {
   const agent = await publishedBlogPosts();
